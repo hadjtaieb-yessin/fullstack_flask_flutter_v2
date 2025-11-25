@@ -6,35 +6,35 @@ import '../models/task.dart';
 import 'auth_service.dart';
 
 class TaskService {
-  static const String baseUrl = 'http://localhost:5000/tasks';
+  static const String baseUrl = 'http://localhost:5000';
 
   static Future<List<Task>> getTasks() async {
-    try {
-      final token = await AuthService().getToken();
-      final response = await http.get(
-        Uri.parse(baseUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-      if (response.statusCode == 200) {
-        final List jsonData = json.decode(response.body);
-        return jsonData.map((e) => Task.fromJson(e)).toList();
-      } else {
-        print('Erreur HTTP: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Erreur: $e');
+    final token = await AuthService().getToken();
+
+    final response = await http.get(
+      Uri.parse("$baseUrl/tasks?page=1&limit=10"),
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final jsonBody = jsonDecode(response.body);
+
+      // ICI : récupérer le tableau des tâches
+      final List<dynamic> list = jsonBody["tasks"];
+
+      return list.map((t) => Task.fromJson(t)).toList();
+    } else {
+      throw Exception("Erreur lors de la récupération des tâches");
     }
-    return [];
   }
 
   static Future<void> addTask(Task task) async {
     try {
       final token = await AuthService().getToken();
       final response = await http.post(
-        Uri.parse(baseUrl),
+        Uri.parse('$baseUrl/tasks'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -53,11 +53,12 @@ class TaskService {
     try {
       final token = await AuthService().getToken();
       final response = await http.put(
-        Uri.parse('$baseUrl/$id'),
+        Uri.parse('$baseUrl/tasks/$id'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
+        // On n'envoie que les champs modifiés.
         body: json.encode({
           if (title != null) "title": title,
           if (done != null) "done": done,
@@ -76,7 +77,7 @@ class TaskService {
     try {
       final token = await AuthService().getToken();
       final response = await http.delete(
-        Uri.parse('$baseUrl/$id'),
+        Uri.parse('$baseUrl/tasks/$id'),
         headers: {
           'Authorization': 'Bearer $token',
         },

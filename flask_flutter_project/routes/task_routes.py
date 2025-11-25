@@ -10,12 +10,31 @@ from flask_jwt_extended import jwt_required
 tasks_bp = Blueprint("tasks_bp", __name__)
 
 
-# GET /tasks : récupérer toutes les tâches
+# GET /tasks : récupérer toutes les tâches AVEC pagination
 @tasks_bp.route("/tasks", methods=["GET"])
 @jwt_required()
 def get_tasks():
-    tasks = Task.query.all()  # Récupère toutes les tâches depuis la base
-    return jsonify([t.to_dict() for t in tasks])  # Convertit en JSON
+    # lire ?page= & ?limit=
+    page = request.args.get("page", 1, type=int)
+    limit = request.args.get("limit", 20, type=int)
+
+    # pagination SQLAlchemy
+    pagination = Task.query.order_by(Task.id).paginate(
+        page=page, per_page=limit, error_out=False
+    )
+    # données paginées
+    tasks = [task.to_dict() for task in pagination.items]
+
+    # réponse JSON
+    return jsonify(
+        {
+            "tasks": tasks,  # liste des tâches pour cette page
+            "total": pagination.total,  # nombre total d'entrées
+            "page": page,  # page actuelle (demandée par le client)
+            "limit": limit,
+            "pages": pagination.pages,  # nombre total de pages
+        }
+    )
 
 
 # POST /tasks : ajouter une nouvelle tâche

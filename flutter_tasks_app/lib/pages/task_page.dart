@@ -13,16 +13,23 @@ class TaskPage extends StatefulWidget {
 
 class TaskPageState extends State<TaskPage> {
   List<Task> tasks = [];
-  String filter = "all";
+  String filter = "all"; // Filtre sélectionné (toutes / faites / non faites)
 
   @override
   void initState() {
     super.initState();
-    fetchTasks();
-    checkLoginStatus();
+    refreshTasks();
+    checkLoginStatus(); // Vérifier si l'utilisateur est connecté
   }
 
-  // Vérifie si l'utilisateur est connecté
+  Future<void> refreshTasks() async {
+    final fetchedTasks = await TaskService.getTasks();
+    setState(() {
+      tasks = fetchedTasks;
+    });
+  }
+
+  // Vérifie si l'utilisateur est connecté, si non, redirection vers login
   void checkLoginStatus() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
@@ -34,6 +41,7 @@ class TaskPageState extends State<TaskPage> {
     }
   }
 
+  // Récupère toutes les tâches depuis l'API
   Future<void> fetchTasks() async {
     final fetchedTasks = await TaskService.getTasks();
     setState(() {
@@ -41,22 +49,21 @@ class TaskPageState extends State<TaskPage> {
     });
   }
 
+  // Ajouter une nouvelle tâche
   Future<void> addTask(String title) async {
     final newTask = Task(title: title, done: false);
     await TaskService.addTask(newTask);
+
     fetchTasks();
   }
 
-/*   Future<void> updateTask(int id, bool done) async {
-    await TaskService.updateTask(id, done);
-    fetchTasks();
-  } */
-
+  // Mettre à jour une tâche (title ou done)
   Future<void> updateTask(int id, {String? title, bool? done}) async {
     await TaskService.updateTask(id, title: title, done: done);
     fetchTasks();
   }
 
+  // Modifier le titre d’une tâche via une pop-up
   void editTaskTitle(BuildContext context, Task task) {
     final controller = TextEditingController(text: task.title);
 
@@ -92,15 +99,18 @@ class TaskPageState extends State<TaskPage> {
     );
   }
 
+  // Supprimer une tâche
   Future<void> deleteTask(int id) async {
     await TaskService.deleteTask(id);
-    fetchTasks(); // recharge la liste après suppression
+    await fetchTasks();
   }
 
+  // Déconnexion
   void logout() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove('token'); // Supprime le JWT stocké
     if (!mounted) return;
+    // On efface tout l’historique et on revient au login
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -108,6 +118,7 @@ class TaskPageState extends State<TaskPage> {
     );
   }
 
+  // Vérifie si le nom de la tâche est valide (controle de saisie)
   bool validateTaskName(String name) {
     // Longueur min et max
     if (name.length < 3 || name.length > 30) return false;
@@ -121,13 +132,6 @@ class TaskPageState extends State<TaskPage> {
   @override
   Widget build(BuildContext context) {
     final controller = TextEditingController();
-
-    List filteredTasks = tasks;
-    if (filter == "done") {
-      filteredTasks = tasks.where((t) => t.done == true).toList();
-    } else if (filter == "not_done") {
-      filteredTasks = tasks.where((t) => t.done == false).toList();
-    }
 
     return Scaffold(
       appBar: AppBar(
@@ -172,76 +176,99 @@ class TaskPageState extends State<TaskPage> {
 
           // LISTE DES TÂCHES FILTRÉES
           Expanded(
-            child: ListView.builder(
-              itemCount: filteredTasks.length,
-              itemBuilder: (context, index) {
-                final task = filteredTasks[index];
-                return Card(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.grey[800]
-                      : Colors.lightBlue[100 * ((index % 8) + 1)],
-                  margin:
-                      const EdgeInsets.symmetric(vertical: 4, horizontal: 15),
-                  child: ListTile(
-                    title: Text(
-                      task.title,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Checkbox(
-                          value: task.done,
-                          onChanged: (bool? value) {
-                            if (value != null) {
-                              updateTask(task.id!, done: value);
-                            }
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.blue),
-                          onPressed: () => editTaskTitle(context, task),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (_) => AlertDialog(
-                                title: const Text("Supprimer ?"),
-                                content: const Text(
-                                    "Voulez-vous vraiment supprimer cette tâche ?"),
-                                actions: [
-                                  TextButton(
-                                    child: const Text("Annuler"),
-                                    onPressed: () => Navigator.pop(context),
-                                  ),
-                                  ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.red),
-                                    child: const Text("Supprimer"),
-                                    onPressed: () {
-                                      Navigator.pop(context); // fermer la popup
-                                      deleteTask(
-                                          task.id!); // lancer la suppression
-                                    },
-                                  ),
-                                ],
+            child: tasks.isEmpty
+                ? const Center(child: Text("Aucune tâche trouvée"))
+                : ListView.builder(
+                    itemCount: tasks.length,
+                    itemBuilder: (context, index) {
+                      final task = tasks[index];
+
+                      // Filtrer
+                      if (filter == 'done' && !task.done) {
+                        return const SizedBox.shrink();
+                      }
+                      if (filter == 'not_done' && task.done) {
+                        return const SizedBox.shrink();
+                      }
+
+                      return Card(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.grey[800]
+                            : Colors.lightBlue[100 * ((index % 8) + 1)],
+                        margin: const EdgeInsets.symmetric(
+                            vertical: 4, horizontal: 15),
+                        child: ListTile(
+                          title: Text(
+                            task.title,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+
+                          // ACTIONS
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // CHECKBOX
+                              Checkbox(
+                                value: task.done,
+                                onChanged: (value) async {
+                                  if (value != null) {
+                                    await updateTask(task.id!, done: value);
+                                    await refreshTasks();
+                                  }
+                                },
                               ),
-                            );
-                          },
+
+                              // EDIT
+                              IconButton(
+                                icon:
+                                    const Icon(Icons.edit, color: Colors.blue),
+                                onPressed: () => editTaskTitle(context, task),
+                              ),
+
+                              // DELETE
+                              IconButton(
+                                icon:
+                                    const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (ctx) {
+                                      return AlertDialog(
+                                        title: const Text("Confirmer"),
+                                        content: const Text(
+                                            "Voulez-vous vraiment supprimer cette tâche ?"),
+                                        actions: [
+                                          TextButton(
+                                            child: const Text("Annuler"),
+                                            onPressed: () => Navigator.pop(ctx),
+                                          ),
+                                          TextButton(
+                                            child: const Text("Supprimer",
+                                                style: TextStyle(
+                                                    color: Colors.red)),
+                                            onPressed: () async {
+                                              Navigator.pop(
+                                                  ctx); // fermer modal
+                                              await deleteTask(task.id!);
+                                            },
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
 
           Padding(

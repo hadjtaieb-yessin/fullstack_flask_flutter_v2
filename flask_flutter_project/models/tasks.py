@@ -1,11 +1,7 @@
-# models/task.py
 # Contient le modèle Task et l'objet db pour SQLAlchemy
 
 from flask_sqlalchemy import SQLAlchemy
 from . import db
-
-# Objet db utilisé pour toutes les interactions avec la base
-# db = SQLAlchemy()
 
 
 class Task(db.Model):

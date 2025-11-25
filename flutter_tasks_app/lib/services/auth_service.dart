@@ -3,7 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AuthService {
-  final _storage = const FlutterSecureStorage();
+  final _storage =
+      const FlutterSecureStorage(); // Stockage sécurisé pour garder le token JWT même après fermeture de l'app.
   final String baseUrl = "http://localhost:5000";
 
   // Register
@@ -23,10 +24,14 @@ class AuthService {
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'username': username, 'password': password}),
     );
-
+    // Si le serveur renvoie 200 = identifiants corrects.
     if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      await _storage.write(key: 'token', value: data['access_token']);
+      final data =
+          json.decode(response.body); // On récupère le token envoyé par l'API.
+      await _storage.write(
+          key: 'token',
+          value: data[
+              'access_token']); // On sauvegarde le token dans le stockage sécurisé. Cela permet à l'utilisateur de rester connecté.
       return true;
     }
     return false;
@@ -34,6 +39,7 @@ class AuthService {
 
   // Get token
   Future<String?> getToken() async {
-    return await _storage.read(key: 'token');
+    return await _storage.read(
+        key: 'token'); // Lire le token stocké dans FlutterSecureStorage.
   }
 }

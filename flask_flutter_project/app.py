@@ -16,12 +16,20 @@ jwt = JWTManager()
 def create_app():
 
     app = Flask(__name__)  # Crée l'application Flask
+    CORS(
+        app,
+        resources={
+            r"/*": {
+                "origins": "*",
+                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                "allow_headers": ["Content-Type", "Authorization"],
+            }
+        },
+    )
     app.config.from_object(Config)  # Charge la configuration depuis config.py
 
     db.init_app(app)  # Initialise SQLAlchemy avec cette application
     jwt.init_app(app)
-
-    CORS(app, resources={r"/*": {"origins": "*"}})  # Active CORS pour toutes les routes
 
     # Crée les tables dans la base si elles n'existent pas
     with app.app_context():
