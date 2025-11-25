@@ -42,9 +42,19 @@ class LoginPageState extends State<LoginPage> {
       // Si la connexion a réussi, on navigue vers la page des tâches
       if (!mounted) return;
       Navigator.pushReplacement(
-        // Remplace la page actuelle par TaskPage
         context,
-        MaterialPageRoute(builder: (_) => TaskPage()),
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const TaskPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+          transitionDuration:
+              const Duration(milliseconds: 1000), // durée de l’animation
+        ),
       );
     } else {
       setState(() {
