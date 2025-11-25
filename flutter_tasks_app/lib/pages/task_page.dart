@@ -129,10 +129,53 @@ class TaskPageState extends State<TaskPage> {
     return regex.hasMatch(name);
   }
 
+  void showAddTaskDialog(BuildContext context) {
+    final TextEditingController controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Ajouter une nouvelle tâche'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: 'Nom de la tâche',
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: const Text('Annuler'),
+              onPressed: () => Navigator.pop(context),
+            ),
+            ElevatedButton(
+              child: const Text('Ajouter'),
+              onPressed: () {
+                final text = controller.text.trim();
+
+                if (!validateTaskName(text)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                          "Nom invalide (3–30 caractères, sans caractères spéciaux)."),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                addTask(text);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final controller = TextEditingController();
-
     return Scaffold(
       appBar: AppBar(
         actions: [
@@ -270,68 +313,12 @@ class TaskPageState extends State<TaskPage> {
                     },
                   ),
           ),
-
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: controller,
-                    maxLines: 2,
-                    decoration: InputDecoration(
-                      hintText: 'ajoute une tâche...',
-                      prefixIcon: const Icon(Icons.alarm_add_rounded, size: 20),
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () => controller.clear(),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                          vertical: 10, horizontal: 15),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                      filled: true,
-                      fillColor: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.grey[700]
-                          : Colors.cyanAccent,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        Theme.of(context).brightness == Brightness.dark
-                            ? Colors.blue[700]
-                            : Colors.blue[400],
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6)),
-                  ),
-                  onPressed: () {
-                    final text = controller.text.trim();
-
-                    if (!validateTaskName(text)) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            "Nom invalide (3–30 caractères, sans caractères spéciaux).",
-                          ),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                      return; // ne pas ajouter
-                    }
-
-                    addTask(text);
-                    controller.clear();
-                  },
-                  child: const Text('Ajouter'),
-                ),
-              ],
-            ),
-          ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.blue,
+        child: const Icon(Icons.add, size: 30),
+        onPressed: () => showAddTaskDialog(context),
       ),
     );
   }
