@@ -8,11 +8,11 @@ import 'auth_service.dart';
 class TaskService {
   static const String baseUrl = 'http://localhost:5000';
 
-  static Future<List<Task>> getTasks() async {
+  static Future<Map<String, dynamic>> getTasks(int page, int limit) async {
     final token = await AuthService().getToken();
 
     final response = await http.get(
-      Uri.parse("$baseUrl/tasks?page=1&limit=10"),
+      Uri.parse("$baseUrl/tasks?page=$page&limit=$limit"),
       headers: {
         'Authorization': 'Bearer $token',
       },
@@ -20,11 +20,20 @@ class TaskService {
 
     if (response.statusCode == 200) {
       final jsonBody = jsonDecode(response.body);
+      print("DEBUG tasks JSON = ${jsonBody["tasks"]}");
 
       // ICI : récupérer le tableau des tâches
       final List<dynamic> list = jsonBody["tasks"];
 
-      return list.map((t) => Task.fromJson(t)).toList();
+      final tasks = list.map((t) => Task.fromJson(t)).toList();
+
+      return {
+        "tasks": tasks,
+        "total": jsonBody["total"],
+        "pages": jsonBody["pages"],
+        "page": jsonBody["page"],
+        "limit": jsonBody["limit"],
+      };
     } else {
       throw Exception("Erreur lors de la récupération des tâches");
     }

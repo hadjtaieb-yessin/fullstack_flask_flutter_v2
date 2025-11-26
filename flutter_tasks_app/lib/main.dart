@@ -2,11 +2,17 @@ import 'package:flutter/material.dart';
 import 'pages/login_page.dart';
 import 'pages/register_page.dart';
 import 'pages/task_page.dart';
+import 'package:device_preview/device_preview.dart';
 
 //     POINT D’ENTRÉE DU APP
 
-// La fonction main() lance l'application Flutter.
-void main() => runApp(const MyApp());
+// La fonction main() lance l'application Flutter + Device Preview pour aperçu mobile
+void main() {
+  runApp(DevicePreview(
+    enabled: true,
+    builder: (context) => const MyApp(),
+  ));
+}
 
 // MyApp est le widget principal de l'application.
 // Il configure les thèmes, la navigation, et la page d'accueil.

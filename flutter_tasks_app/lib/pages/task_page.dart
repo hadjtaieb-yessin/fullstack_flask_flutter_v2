@@ -14,19 +14,15 @@ class TaskPage extends StatefulWidget {
 class TaskPageState extends State<TaskPage> {
   List<Task> tasks = [];
   String filter = "all"; // Filtre sélectionné (toutes / faites / non faites)
+  int currentPage = 1;
+  int totalPages = 2;
+  final int limit = 4;
 
   @override
   void initState() {
     super.initState();
-    refreshTasks();
+    loadPaginatedTasks();
     checkLoginStatus(); // Vérifier si l'utilisateur est connecté
-  }
-
-  Future<void> refreshTasks() async {
-    final fetchedTasks = await TaskService.getTasks();
-    setState(() {
-      tasks = fetchedTasks;
-    });
   }
 
   // Vérifie si l'utilisateur est connecté, si non, redirection vers login
@@ -37,15 +33,16 @@ class TaskPageState extends State<TaskPage> {
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/login');
     } else {
-      fetchTasks();
+      loadPaginatedTasks();
     }
   }
 
-  // Récupère toutes les tâches depuis l'API
-  Future<void> fetchTasks() async {
-    final fetchedTasks = await TaskService.getTasks();
+  Future<void> loadPaginatedTasks() async {
+    final data = await TaskService.getTasks(currentPage, limit);
+
     setState(() {
-      tasks = fetchedTasks;
+      tasks = data["tasks"];
+      totalPages = data["pages"];
     });
   }
 
@@ -54,13 +51,13 @@ class TaskPageState extends State<TaskPage> {
     final newTask = Task(title: title, done: false);
     await TaskService.addTask(newTask);
 
-    fetchTasks();
+    loadPaginatedTasks();
   }
 
   // Mettre à jour une tâche (title ou done)
   Future<void> updateTask(int id, {String? title, bool? done}) async {
     await TaskService.updateTask(id, title: title, done: done);
-    fetchTasks();
+    loadPaginatedTasks();
   }
 
   // Modifier le titre d’une tâche via une pop-up
@@ -102,7 +99,7 @@ class TaskPageState extends State<TaskPage> {
   // Supprimer une tâche
   Future<void> deleteTask(int id) async {
     await TaskService.deleteTask(id);
-    await fetchTasks();
+    await loadPaginatedTasks();
   }
 
   // Déconnexion
@@ -177,6 +174,7 @@ class TaskPageState extends State<TaskPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // Bar en haut
       appBar: AppBar(
         actions: [
           IconButton(
@@ -194,6 +192,7 @@ class TaskPageState extends State<TaskPage> {
         backgroundColor: Colors.blue[600],
         centerTitle: true,
       ),
+      // Body de la page
       body: Column(
         children: [
           //  AJOUT : le menu déroulant de filtrage
@@ -217,7 +216,7 @@ class TaskPageState extends State<TaskPage> {
             ),
           ),
 
-          // LISTE DES TÂCHES FILTRÉES
+          // LISTE DES TÂCHES
           Expanded(
             child: tasks.isEmpty
                 ? const Center(child: Text("Aucune tâche trouvée"))
@@ -239,12 +238,12 @@ class TaskPageState extends State<TaskPage> {
                             ? Colors.grey[800]
                             : Colors.lightBlue[100 * ((index % 8) + 1)],
                         margin: const EdgeInsets.symmetric(
-                            vertical: 4, horizontal: 15),
+                            vertical: 4, horizontal: 17),
                         child: ListTile(
                           title: Text(
                             task.title,
                             style: const TextStyle(
-                              fontSize: 20,
+                              fontSize: 15,
                               fontWeight: FontWeight.bold,
                               color: Colors.black,
                               fontStyle: FontStyle.italic,
@@ -261,7 +260,7 @@ class TaskPageState extends State<TaskPage> {
                                 onChanged: (value) async {
                                   if (value != null) {
                                     await updateTask(task.id!, done: value);
-                                    await refreshTasks();
+                                    await loadPaginatedTasks();
                                   }
                                 },
                               ),
@@ -312,6 +311,33 @@ class TaskPageState extends State<TaskPage> {
                       );
                     },
                   ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextButton(
+                onPressed: currentPage > 1
+                    ? () {
+                        currentPage--;
+                        loadPaginatedTasks();
+                      }
+                    : null,
+                child: const Text("Précédent"),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Text("Page $currentPage / $totalPages"),
+              ),
+              TextButton(
+                onPressed: currentPage < totalPages
+                    ? () {
+                        currentPage++;
+                        loadPaginatedTasks();
+                      }
+                    : null,
+                child: const Text("Suivant"),
+              ),
+            ],
           ),
         ],
       ),
