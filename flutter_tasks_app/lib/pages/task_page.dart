@@ -120,7 +120,7 @@ class TaskPageState extends State<TaskPage> {
     // Longueur min et max
     if (name.length < 3 || name.length > 30) return false;
 
-    //  Regex pour autoriser seulement: lettres, chiffres, espaces
+    //  Regex pour autoriser seulement: lettres( é,à,ç ... inclus ), chiffres, espaces
     final regex = RegExp(r'^[a-zA-Z0-9À-ÿ ]+$');
 
     return regex.hasMatch(name);
